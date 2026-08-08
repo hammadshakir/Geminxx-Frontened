@@ -11,9 +11,7 @@ const useFetch = (url) => {
     fetch(url)
       .then((res) => {
         if (!res.ok) {
-          // Agar status 404 ya 500 aya toh Error Page par navigate karein
           return res.json().then((errData) => {
-            // State ke through error data bhejna chahte hain toh navigate state use karein
             navigate("/error", { 
               state: { 
                 statusCode: res.status, 

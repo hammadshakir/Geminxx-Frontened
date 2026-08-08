@@ -22,10 +22,9 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [email, setEmail] = useState('');
-  const [newsletterStatus, setNewsletterStatus] = useState('idle'); // idle | loading | success | error
+  const [newsletterStatus, setNewsletterStatus] = useState('idle');
   const [newsletterMessage, setNewsletterMessage] = useState('');
 
-  // Handle Back to Top visibility
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 400) {
@@ -49,16 +48,7 @@ export default function Footer() {
     setNewsletterStatus('loading');
     setNewsletterMessage('');
 
-    // Simulate API call – replace with your actual endpoint
     try {
-      // const response = await fetch('/api/newsletter', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email }),
-      // });
-      // if (!response.ok) throw new Error('Subscription failed');
-      
-      // Simulate success after 1.5s
       await new Promise(resolve => setTimeout(resolve, 1500));
       setNewsletterStatus('success');
       setNewsletterMessage('Thanks for subscribing! 🎉');
@@ -90,16 +80,16 @@ export default function Footer() {
         </button>
       )}
 
-      <footer className="relative bg-gradient-to-br from-white via-gray-50 to-indigo-50/30 border-t border-gray-200/80">
+      <footer className="relative bg-gradient-to-br from-white via-gray-50 to-indigo-50/30 border-t border-gray-200/80 w-full overflow-x-hidden">
         {/* Subtle decorative pattern */}
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNjY2NjY2MiIGZpbGwtb3BhY2l0eT0iMC4wNCI+PHBhdGggZD0iTTM2IDM0di00aDR2NGgtNHptMCAwdjRoNHYtNGgtNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNjY2NjY2MiIGZpbGwtb3BhY2l0eT0iMC4wNCI+PHBhdGggZD0iTTM2IDM0di00aDR2NGgtNHptMCAwdjRoNHYtNGgtNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-50 pointer-events-none"></div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          {/* Main Footer Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+          {/* Main Footer Grid - Fixed overflow */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 md:gap-10">
 
-            {/* Brand Column */}
-            <div className="md:col-span-4">
+            {/* Brand Column - Full width on mobile */}
+            <div className="sm:col-span-2 lg:col-span-4">
               <Link to="/" className="flex items-center gap-2 group">
                 <div className="p-2 bg-indigo-100 rounded-xl group-hover:bg-indigo-200 transition-all duration-300 group-hover:scale-110 group-hover:rotate-6">
                   <FaProjectDiagram className="w-6 h-6 text-indigo-600" />
@@ -116,25 +106,25 @@ export default function Footer() {
               {/* Contact Info */}
               <div className="mt-4 space-y-2">
                 <div className="flex items-center gap-3 text-sm text-gray-500">
-                  <FaEnvelope className="w-4 h-4 text-indigo-500" />
-                  <a href="mailto:support@gemnixx.com" className="hover:text-indigo-600 transition">
+                  <FaEnvelope className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                  <a href="mailto:support@gemnixx.com" className="hover:text-indigo-600 transition truncate">
                     support@gemnixx.com
                   </a>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-gray-500">
-                  <FaPhone className="w-4 h-4 text-indigo-500" />
+                  <FaPhone className="w-4 h-4 text-indigo-500 flex-shrink-0" />
                   <a href="tel:+1234567890" className="hover:text-indigo-600 transition">
                     +1 (234) 567-890
                   </a>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-gray-500">
-                  <FaMapMarkerAlt className="w-4 h-4 text-indigo-500" />
+                  <FaMapMarkerAlt className="w-4 h-4 text-indigo-500 flex-shrink-0" />
                   <span>San Francisco, CA</span>
                 </div>
               </div>
 
               {/* Social Links */}
-              <div className="mt-5 flex gap-2">
+              <div className="mt-5 flex gap-2 flex-wrap">
                 <a
                   href="#"
                   className="w-10 h-10 rounded-full bg-gray-100 hover:bg-indigo-600 text-gray-500 hover:text-white flex items-center justify-center transition-all duration-300 hover:scale-110 hover:rotate-6 shadow-sm hover:shadow-md"
@@ -167,7 +157,7 @@ export default function Footer() {
             </div>
 
             {/* Quick Links - Product */}
-            <div className="md:col-span-2">
+            <div className="sm:col-span-1 lg:col-span-2">
               <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider">
                 Product
               </h4>
@@ -196,7 +186,7 @@ export default function Footer() {
             </div>
 
             {/* Quick Links - Company */}
-            <div className="md:col-span-2">
+            <div className="sm:col-span-1 lg:col-span-2">
               <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider">
                 Company
               </h4>
@@ -225,7 +215,7 @@ export default function Footer() {
             </div>
 
             {/* Quick Links - Resources */}
-            <div className="md:col-span-2">
+            <div className="sm:col-span-1 lg:col-span-2">
               <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider">
                 Resources
               </h4>
@@ -254,7 +244,7 @@ export default function Footer() {
             </div>
 
             {/* Newsletter / CTA */}
-            <div className="md:col-span-2">
+            <div className="sm:col-span-2 lg:col-span-2">
               <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider">
                 Stay Updated
               </h4>
@@ -263,19 +253,19 @@ export default function Footer() {
               </p>
               <form onSubmit={handleNewsletterSubmit} className="mt-3">
                 <div className="flex flex-col gap-2">
-                  <div className="flex">
+                  <div className="flex flex-col xs:flex-row">
                     <input
                       type="email"
                       placeholder="Email address"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="flex-1 px-4 py-2.5 border border-gray-300 rounded-l-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                      className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg xs:rounded-r-none xs:rounded-l-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition w-full"
                     />
                     <button
                       type="submit"
                       disabled={newsletterStatus === 'loading'}
-                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-r-lg text-sm font-medium transition flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg xs:rounded-l-none xs:rounded-r-lg text-sm font-medium transition flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-2 xs:mt-0"
                     >
                       {newsletterStatus === 'loading' ? (
                         <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
@@ -297,7 +287,7 @@ export default function Footer() {
                 </div>
               </form>
               <p className="mt-2 text-xs text-gray-400 flex items-center gap-1">
-                <FaLock className="w-3 h-3" />
+                <FaLock className="w-3 h-3 flex-shrink-0" />
                 No spam. Unsubscribe anytime.
               </p>
             </div>
@@ -305,21 +295,21 @@ export default function Footer() {
 
           {/* Trust Badges */}
           <div className="mt-12 pt-6 border-t border-gray-200/70">
-            <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10">
+            <div className="flex flex-wrap items-center justify-center gap-4 md:gap-10">
               <div className="flex items-center gap-2 text-sm text-gray-500">
-                <FaShieldAlt className="w-5 h-5 text-emerald-500" />
+                <FaShieldAlt className="w-5 h-5 text-emerald-500 flex-shrink-0" />
                 <span>SSL Secure</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-500">
-                <HiOutlineBadgeCheck className="w-5 h-5 text-blue-500" />
+                <HiOutlineBadgeCheck className="w-5 h-5 text-blue-500 flex-shrink-0" />
                 <span>GDPR Compliant</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-500">
-                <FaLock className="w-5 h-5 text-indigo-500" />
+                <FaLock className="w-5 h-5 text-indigo-500 flex-shrink-0" />
                 <span>256-bit Encryption</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-500">
-                <FaRegCopyright className="w-5 h-5 text-gray-400" />
+                <FaRegCopyright className="w-5 h-5 text-gray-400 flex-shrink-0" />
                 <span>100% Cloud-based</span>
               </div>
             </div>
@@ -328,10 +318,10 @@ export default function Footer() {
           {/* Bottom Bar */}
           <div className="mt-8 pt-6 border-t border-gray-200/70 flex flex-col sm:flex-row justify-between items-center gap-4">
             <p className="text-sm text-gray-400 flex items-center gap-1">
-              <FaRegCopyright className="w-3 h-3" />
+              <FaRegCopyright className="w-3 h-3 flex-shrink-0" />
               {currentYear} Gemnixx. All rights reserved.
             </p>
-            <div className="flex flex-wrap items-center gap-3 text-sm">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-sm">
               <Link to="#" className="text-gray-400 hover:text-indigo-600 transition">
                 Privacy Policy
               </Link>
@@ -343,9 +333,9 @@ export default function Footer() {
               <Link to="#" className="text-gray-400 hover:text-indigo-600 transition">
                 Cookie Policy
               </Link>
-              <span className="text-gray-300">•</span>
-              <span className="text-gray-400 text-xs">
-                Made with ❤️ by Gemnixx Team
+              <span className="text-gray-300 hidden sm:inline">•</span>
+              <span className="text-gray-400 text-xs w-full sm:w-auto text-center sm:text-left">
+                Made with ♥ by Gemnixx Team
               </span>
             </div>
           </div>

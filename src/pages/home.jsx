@@ -15,6 +15,27 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   MoreHorizontal,
+  Search,
+  List,
+  Grid,
+  Eye,
+  Edit,
+  Trash2,
+  BarChart3,
+  PieChart,
+  Users,
+  Target,
+  Activity,
+  Zap,
+  Award,
+  Briefcase,
+  Flag,
+  Star,
+  Bell,
+  MessageSquare,
+  Share2,
+  Bookmark,
+  ExternalLink,
 } from 'lucide-react';
 import {
   BarChart,
@@ -25,6 +46,9 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
+  PieChart as RePieChart,
+  Pie,
+  Legend,
 } from 'recharts';
 import ProjectCard from '../components/ProjectCard';
 import StatsCard from '../components/StatsCard';
@@ -32,7 +56,6 @@ import SearchBar from '../components/SearchBar';
 import StatusBadge from '../components/StatusBadge';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-
 
 export default function Home() {
   const [projects, setProjects] = useState([]);
@@ -42,6 +65,7 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [selectedProject, setSelectedProject] = useState(null);
 
   // ---- Fetch ----
   useEffect(() => {
@@ -92,14 +116,60 @@ export default function Home() {
     const deadline = new Date(p.DeadLine);
     return deadline < new Date() && p.progress < 100;
   }).length;
+  const onTrack = projects.filter(p => p.progress > 70 && p.progress < 100).length;
 
-  // Trends (dummy for demo – you can calculate week-over-week)
-  const statsData = [
-    { title: 'Total Projects', value: total, icon: LayoutGrid, color: 'indigo', trend: '+12%' },
-    { title: 'Completed', value: completed, icon: CheckCircle, color: 'emerald', trend: '+8%' },
-    { title: 'In Progress', value: inProgress, icon: Clock, color: 'amber', trend: '-2%' },
-    { title: 'Overdue', value: overdue, icon: AlertCircle, color: 'rose', trend: '+5%' },
-  ];
+  // Stats with proper icons
+  // In Home.jsx
+const statsData = [
+  { 
+    title: 'Total Projects', 
+    value: total, 
+    icon: 'project', 
+    color: 'indigo', 
+    trend: '+12%',
+    subtitle: 'Active'
+  },
+  { 
+    title: 'Completed', 
+    value: completed, 
+    icon: 'check', 
+    color: 'emerald', 
+    trend: '+8%',
+    subtitle: 'Done'
+  },
+  { 
+    title: 'In Progress', 
+    value: inProgress, 
+    icon: 'clock', 
+    color: 'amber', 
+    trend: '-2%',
+    subtitle: 'Working'
+  },
+  { 
+    title: 'Overdue', 
+    value: overdue, 
+    icon: 'warning', 
+    color: 'rose', 
+    trend: '+5%',
+    subtitle: 'Late'
+  },
+];
+
+// In return
+<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+  {statsData.map((stat, idx) => (
+    <StatsCard
+      key={idx}
+      title={stat.title}
+      value={stat.value}
+      icon={stat.icon}
+      color={stat.color}
+      trend={stat.trend}
+      subtitle={stat.subtitle}
+      animated
+    />
+  ))}
+</div>
 
   // ---- Chart Data ----
   const chartData = [
@@ -118,12 +188,13 @@ export default function Home() {
     .slice(0, 5);
 
   // ---- Recent Activity (dummy – can be replaced with real logs) ----
-  const recentActivities = projects.slice(0, 3).map(p => ({
-    project: p.title,
-    action: 'updated',
-    time: '2 hours ago',
-    color: 'blue',
-  }));
+  const recentActivities = [
+    { project: 'E-commerce Platform', action: 'updated', time: '2 hours ago', color: 'blue' },
+    { project: 'Mobile App Design', action: 'completed', time: '4 hours ago', color: 'green' },
+    { project: 'Marketing Campaign', action: 'started', time: '6 hours ago', color: 'purple' },
+    { project: 'API Integration', action: 'reviewed', time: '1 day ago', color: 'amber' },
+    { project: 'Database Migration', action: 'deployed', time: '2 days ago', color: 'emerald' },
+  ];
 
   // ---- Loading ----
   if (loading) {
@@ -143,7 +214,7 @@ export default function Home() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* ----- Premium Hero Section ----- */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 to-blue-500 rounded-3xl p-8 md:p-10 mb-8 shadow-2xl">
+        <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-indigo-500 to-blue-500 rounded-3xl p-8 md:p-10 mb-8 shadow-2xl">
           <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4yIj48cGF0aCBkPSJNMzYgMzR2LTRoNHY0aC00em0wIDB2LTRoLTR2NGg0eiIvPjwvZz48L2c+PC9zdmc+')]"></div>
           <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div className="text-white">
@@ -167,42 +238,64 @@ export default function Home() {
                 </button>
               </Link>
               <button className="px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-xl font-semibold hover:bg-white/30 transition flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
+                <BarChart3 className="w-5 h-5" />
                 Analytics
               </button>
             </div>
           </div>
           {/* Quick stats mini */}
           <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-6 border-t border-white/20">
-            <div>
-              <p className="text-indigo-200 text-xs uppercase tracking-wider">Total</p>
-              <p className="text-white text-2xl font-bold">{total}</p>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <LayoutGrid className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-indigo-200 text-xs uppercase tracking-wider">Total</p>
+                <p className="text-white text-2xl font-bold">{total}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-indigo-200 text-xs uppercase tracking-wider">Completed</p>
-              <p className="text-white text-2xl font-bold">{completed}</p>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <CheckCircle className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-indigo-200 text-xs uppercase tracking-wider">Completed</p>
+                <p className="text-white text-2xl font-bold">{completed}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-indigo-200 text-xs uppercase tracking-wider">In Progress</p>
-              <p className="text-white text-2xl font-bold">{inProgress}</p>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Clock className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-indigo-200 text-xs uppercase tracking-wider">In Progress</p>
+                <p className="text-white text-2xl font-bold">{inProgress}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-indigo-200 text-xs uppercase tracking-wider">Overdue</p>
-              <p className="text-white text-2xl font-bold">{overdue}</p>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-indigo-200 text-xs uppercase tracking-wider">Overdue</p>
+                <p className="text-white text-2xl font-bold">{overdue}</p>
+              </div>
             </div>
           </div>
         </div>
 
         {/* ----- Stats Cards with Trends ----- */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
           {statsData.map((stat, idx) => (
             <StatsCard
               key={idx}
               title={stat.title}
               value={stat.value}
-              icon={<stat.icon className="w-6 h-6" />}
+              icon={stat.icon}
               color={stat.color}
               trend={stat.trend}
+              subtitle={stat.subtitle}
+              metric={stat.metric}
               animated
             />
           ))}
@@ -213,9 +306,12 @@ export default function Home() {
           {/* Chart takes 2/3 */}
           <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                Project Status Distribution
-              </h3>
+              <div className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-indigo-600" />
+                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  Project Status Distribution
+                </h3>
+              </div>
               <span className="text-xs text-gray-400">Last 30 days</span>
             </div>
             <div className="h-64">
@@ -240,25 +336,36 @@ export default function Home() {
           {/* Upcoming Deadlines (1/3) */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                ⏰ Upcoming Deadlines
-              </h3>
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-indigo-600" />
+                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  Upcoming Deadlines
+                </h3>
+              </div>
               <span className="text-xs text-gray-400">{upcomingDeadlines.length} due soon</span>
             </div>
             {upcomingDeadlines.length === 0 ? (
-              <p className="text-gray-400 text-sm text-center py-6">No upcoming deadlines 🎉</p>
+              <div className="text-center py-6">
+                <Award className="w-12 h-12 text-green-400 mx-auto mb-2" />
+                <p className="text-gray-400 text-sm">No upcoming deadlines 🎉</p>
+              </div>
             ) : (
               <ul className="space-y-3">
                 {upcomingDeadlines.map((p) => {
                   const days = Math.ceil((new Date(p.DeadLine) - new Date()) / (1000 * 60 * 60 * 24));
                   const urgency = days <= 2 ? 'text-rose-600 bg-rose-50' : days <= 7 ? 'text-amber-600 bg-amber-50' : 'text-blue-600 bg-blue-50';
                   return (
-                    <li key={p._id} className="flex items-center justify-between border-b border-gray-100 pb-2 last:border-0 last:pb-0">
-                      <div>
-                        <p className="text-sm font-medium text-gray-800 truncate max-w-[120px]">{p.title}</p>
-                        <p className="text-xs text-gray-400">{new Date(p.DeadLine).toLocaleDateString()}</p>
+                    <li key={p._id} className="flex items-center justify-between border-b border-gray-100 pb-2 last:border-0 last:pb-0 hover:bg-gray-50 p-2 rounded-lg transition">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-1.5 rounded-lg ${urgency}`}>
+                          <Flag className="w-3 h-3" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-800 truncate max-w-[120px]">{p.title}</p>
+                          <p className="text-xs text-gray-400">{new Date(p.DeadLine).toLocaleDateString()}</p>
+                        </div>
                       </div>
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${urgency}`}>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${urgency}`}>
                         {days <= 0 ? 'Overdue' : `${days}d`}
                       </span>
                     </li>
@@ -272,26 +379,40 @@ export default function Home() {
         {/* ----- Recent Activity Feed ----- */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-              Recent Activity
-            </h3>
-            <button className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">View all</button>
+            <div className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-indigo-600" />
+              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                Recent Activity
+              </h3>
+            </div>
+            <button className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
+              View all
+              <ArrowUpRight className="w-3 h-3" />
+            </button>
           </div>
-          {recentActivities.length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-4">No recent activity</p>
-          ) : (
-            <div className="space-y-3">
-              {recentActivities.map((act, idx) => (
-                <div key={idx} className="flex items-center gap-3 text-sm">
-                  <div className={`w-2 h-2 rounded-full bg-${act.color}-500`}></div>
+          <div className="space-y-3">
+            {recentActivities.map((act, idx) => {
+              const colorMap = {
+                blue: 'bg-blue-500',
+                green: 'bg-green-500',
+                purple: 'bg-purple-500',
+                amber: 'bg-amber-500',
+                emerald: 'bg-emerald-500',
+              };
+              return (
+                <div key={idx} className="flex items-center gap-3 text-sm p-2 hover:bg-gray-50 rounded-lg transition">
+                  <div className={`w-2 h-2 rounded-full ${colorMap[act.color] || 'bg-gray-500'}`}></div>
                   <span className="text-gray-600">
                     <span className="font-medium text-gray-800">{act.project}</span> {act.action}
                   </span>
                   <span className="text-gray-400 text-xs ml-auto">{act.time}</span>
+                  <button className="text-gray-400 hover:text-gray-600">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
         </div>
 
         {/* ----- Error ----- */}
@@ -315,33 +436,40 @@ export default function Home() {
               className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
             >
               <option value="all">All</option>
-              <option value="completed">Completed</option>
-              <option value="ontrack">On Track</option>
-              <option value="inprogress">In Progress</option>
-              <option value="starting">Starting</option>
-              <option value="notstarted">Not Started</option>
+              <option value="completed">✅ Completed</option>
+              <option value="ontrack">🚀 On Track</option>
+              <option value="inprogress">⚡ In Progress</option>
+              <option value="starting">🔰 Starting</option>
+              <option value="notstarted">📋 Not Started</option>
             </select>
+            
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span className="hidden sm:inline">|</span>
+              <span>{filteredProjects.length} projects</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
 
-            <div className="flex border border-gray-200 rounded-lg overflow-hidden bg-white">
+            <div className="flex border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`px-3 py-1.5 text-sm transition ${
+                className={`px-3 py-1.5 text-sm transition flex items-center gap-1 ${
                   viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'hover:bg-gray-50 text-gray-600'
                 }`}
               >
-                Grid
+                <Grid className="w-4 h-4" />
+                <span className="hidden sm:inline">Grid</span>
               </button>
               <button
                 onClick={() => setViewMode('table')}
-                className={`px-3 py-1.5 text-sm transition ${
+                className={`px-3 py-1.5 text-sm transition flex items-center gap-1 ${
                   viewMode === 'table' ? 'bg-indigo-600 text-white' : 'hover:bg-gray-50 text-gray-600'
                 }`}
               >
-                List
+                <List className="w-4 h-4" />
+                <span className="hidden sm:inline">List</span>
               </button>
             </div>
           </div>
@@ -358,8 +486,9 @@ export default function Home() {
                 : 'Create your first project and start managing your workflow'}
             </p>
             <Link to="/new">
-              <button className="mt-4 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition shadow-sm">
-                + Create Project
+              <button className="mt-4 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition shadow-sm flex items-center gap-2 mx-auto">
+                <Plus className="w-4 h-4" />
+                Create Project
               </button>
             </Link>
           </div>
@@ -371,63 +500,88 @@ export default function Home() {
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Description</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deadline</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredProjects.map((project) => (
-                  <tr key={project._id} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{project.title}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500 truncate max-w-xs hidden md:table-cell">
-                      {project.description}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {new Date(project.DeadLine).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <StatusBadge progress={project.progress} />
-                    </td>
-                    <td className="px-6 py-4">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <div className="flex items-center gap-2">
-                        <div className="w-20 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-indigo-600 h-2 rounded-full transition-all"
-                            style={{ width: `${project.progress}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-sm text-gray-600">{project.progress}%</span>
+                        <LayoutGrid className="w-4 h-4" />
+                        Title
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        <Link to={`/projects/${project._id}`}>
-                          <button className="px-3 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded transition">
-                            View
-                          </button>
-                        </Link>
-                        <Link to={`/projects/${project._id}/edit`}>
-                          <button className="px-3 py-1 text-xs bg-amber-500 hover:bg-amber-600 text-white rounded transition">
-                            Edit
-                          </button>
-                        </Link>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                      Description
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        Deadline
                       </div>
-                    </td>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Progress
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredProjects.map((project) => (
+                    <tr key={project._id} className="hover:bg-gray-50 transition">
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">{project.title}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500 truncate max-w-xs hidden md:table-cell">
+                        {project.description}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {new Date(project.DeadLine).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <StatusBadge progress={project.progress} />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all"
+                              style={{ width: `${project.progress}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm text-gray-600">{project.progress}%</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-2">
+                          <Link to={`/projects/${project._id}`}>
+                            <button className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition flex items-center gap-1">
+                              <Eye className="w-3 h-3" />
+                              View
+                            </button>
+                          </Link>
+                          <Link to={`/projects/${project._id}/edit`}>
+                            <button className="px-3 py-1.5 text-xs bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition flex items-center gap-1">
+                              <Edit className="w-3 h-3" />
+                              Edit
+                            </button>
+                          </Link>
+                          <button className="px-3 py-1.5 text-xs bg-rose-500 hover:bg-rose-600 text-white rounded-lg transition flex items-center gap-1">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </main>
-       <Footer />
+      <Footer />
     </div>
   );
 }
