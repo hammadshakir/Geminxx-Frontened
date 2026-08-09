@@ -1,5 +1,5 @@
 // components/Sidebar.jsx
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import {
   FiHome,
@@ -21,18 +21,26 @@ import {
   FiStar,
 } from "react-icons/fi";
 import {
-  FaProjectDiagram,
   FaRocket,
   FaUserFriends,
   FaTasks,
 } from "react-icons/fa";
 import { HiOutlineLightBulb } from "react-icons/hi";
 import { MdOutlineAnalytics } from "react-icons/md";
+import { useAuth } from "../context/AuthContext";
+import { logoutUser, logoutAllUsers } from "../services/authApi";
 
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [logoutAll, setLogoutAll] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const { logout } = useAuth();
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -52,9 +60,11 @@ export default function Sidebar() {
 
   // Notify App about sidebar state change
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent('sidebarToggle', { 
-      detail: { isCollapsed } 
-    }));
+    window.dispatchEvent(
+      new CustomEvent("sidebarToggle", {
+        detail: { isCollapsed },
+      }),
+    );
   }, [isCollapsed]);
 
   // Navigation items with icons and labels
@@ -107,13 +117,60 @@ export default function Sidebar() {
     setIsMobileOpen(!isMobileOpen);
   };
 
+  // Open logout confirmation modal
+  const handleLogoutClick = () => {
+    setLogoutAll(false);
+    setShowLogoutModal(true);
+  };
+
+  // Confirm logout
+  const handleConfirmLogout = async () => {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+
+    try {
+      if (logoutAll) {
+        await logoutAllUsers();
+      } else {
+        await logoutUser();
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      logout();
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      setShowLogoutModal(false);
+      setLogoutAll(false);
+      setIsLoggingOut(false);
+      setIsMobileOpen(false);
+
+      navigate("/login", { replace: true });
+    }
+  };
+
+  // Cancel logout
+  const handleCancelLogout = () => {
+    if (isLoggingOut) return;
+
+    setShowLogoutModal(false);
+    setLogoutAll(false);
+  };
+
   // Get stat color
   const getStatColor = (color) => {
-    switch(color) {
-      case 'blue': return 'text-blue-600 bg-blue-50';
-      case 'green': return 'text-green-600 bg-green-50';
-      case 'purple': return 'text-purple-600 bg-purple-50';
-      default: return 'text-gray-600 bg-gray-50';
+    switch (color) {
+      case "blue":
+        return "text-blue-600 bg-blue-50";
+      case "green":
+        return "text-green-600 bg-green-50";
+      case "purple":
+        return "text-purple-600 bg-purple-50";
+      default:
+        return "text-gray-600 bg-gray-50";
     }
   };
 
@@ -150,24 +207,18 @@ export default function Sidebar() {
         `}
       >
         {/* Logo Section */}
-        <div className={`
-          flex items-center border-b border-gray-200
-          ${isCollapsed ? "justify-center py-4" : "px-5 py-4"}
-        `}>
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl group-hover:scale-110 transition-transform duration-300 shadow-md">
-              <FaProjectDiagram className="w-6 h-6 text-white" />
-            </div>
-            {!isCollapsed && (
-              <div>
-                <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Gemnixx
-                </span>
-                <span className="block text-[10px] text-gray-400 font-medium tracking-wider">
-                  PROJECT MANAGEMENT
-                </span>
-              </div>
-            )}
+        <div
+          className={`
+  flex items-center border-b border-gray-200
+  ${isCollapsed ? "justify-center py-4" : "px-5 py-4"}
+`}
+        >
+          <Link to="/" className="flex items-center gap-2 group">
+            <img
+              src="/gemnixx-logo1 (1).png"
+              alt="Gemnixx"
+              className={`${isCollapsed ? "w-10 h-10" : "w-40 h-12"} object-contain`}
+            />
           </Link>
         </div>
 
@@ -184,7 +235,9 @@ export default function Sidebar() {
                   >
                     <Icon className="w-4 h-4 mx-auto mb-1" />
                     <p className="text-sm font-bold">{stat.value}</p>
-                    <p className="text-[9px] font-medium truncate">{stat.label}</p>
+                    <p className="text-[9px] font-medium truncate">
+                      {stat.label}
+                    </p>
                   </div>
                 );
               })}
@@ -201,9 +254,11 @@ export default function Sidebar() {
                   {section.section}
                 </p>
               )}
+
               <div className="space-y-0.5">
                 {section.items.map((item) => {
                   const Icon = item.icon;
+
                   const isActive = item.end
                     ? location.pathname === item.path
                     : location.pathname.startsWith(item.path);
@@ -215,22 +270,33 @@ export default function Sidebar() {
                       className={`
                         flex items-center gap-3 px-3 py-2.5 rounded-xl
                         transition-all duration-200 group relative
-                        ${isActive
-                          ? "bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-gray-800 shadow-sm border border-blue-200/50"
-                          : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+                        ${
+                          isActive
+                            ? "bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-gray-800 shadow-sm border border-blue-200/50"
+                            : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
                         }
                         ${isCollapsed ? "justify-center" : ""}
                       `}
                       title={isCollapsed ? item.label : ""}
                     >
-                      <Icon className={`
+                      <Icon
+                        className={`
                         w-5 h-5 flex-shrink-0
-                        ${isActive ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"}
+                        ${
+                          isActive
+                            ? "text-blue-600"
+                            : "text-gray-400 group-hover:text-blue-600"
+                        }
                         transition-colors
-                      `} />
-                      
+                      `}
+                      />
+
                       {!isCollapsed && (
-                        <span className={`text-sm font-medium ${isActive ? "text-gray-800" : "text-gray-600"}`}>
+                        <span
+                          className={`text-sm font-medium ${
+                            isActive ? "text-gray-800" : "text-gray-600"
+                          }`}
+                        >
                           {item.label}
                         </span>
                       )}
@@ -244,11 +310,13 @@ export default function Sidebar() {
 
                       {/* Active indicator */}
                       {isActive && (
-                        <div className={`
+                        <div
+                          className={`
                           absolute right-0 top-1/2 -translate-y-1/2
                           w-1 h-7 bg-gradient-to-b from-blue-500 to-purple-500 rounded-l-full
                           ${isCollapsed ? "right-1" : ""}
-                        `} />
+                        `}
+                        />
                       )}
                     </NavLink>
                   );
@@ -265,10 +333,17 @@ export default function Sidebar() {
                 className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 group"
               >
                 <FaRocket className="w-5 h-5 text-white group-hover:rotate-12 transition" />
+
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-white">Create Project</p>
-                  <p className="text-[10px] text-blue-200">Launch your next idea</p>
+                  <p className="text-sm font-semibold text-white">
+                    Create Project
+                  </p>
+
+                  <p className="text-[10px] text-blue-200">
+                    Launch your next idea
+                  </p>
                 </div>
+
                 <FiPlus className="w-4 h-4 text-white/70 group-hover:rotate-90 transition" />
               </Link>
             </div>
@@ -293,8 +368,10 @@ export default function Sidebar() {
             <div className="px-3 py-2 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200/50">
               <div className="flex items-center gap-2">
                 <HiOutlineLightBulb className="w-4 h-4 text-yellow-600" />
+
                 <p className="text-xs text-gray-600">
-                  <span className="text-yellow-600 font-medium">Tip:</span> Use shortcuts
+                  <span className="text-yellow-600 font-medium">Tip:</span>{" "}
+                  Use shortcuts
                 </p>
               </div>
             </div>
@@ -308,9 +385,10 @@ export default function Sidebar() {
               transition-all duration-200 group
               ${isCollapsed ? "justify-center" : ""}
             `}
-            onClick={() => console.log("Logout clicked")}
+            onClick={handleLogoutClick}
           >
             <FiLogOut className="w-5 h-5 flex-shrink-0 group-hover:rotate-12 transition" />
+
             {!isCollapsed && (
               <span className="text-sm font-medium">Logout</span>
             )}
@@ -345,27 +423,128 @@ export default function Sidebar() {
         </div>
       </aside>
 
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate-fadeIn">
+
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-full bg-red-50 flex items-center justify-center">
+                  <FiLogOut className="w-5 h-5 text-red-500" />
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800">
+                    Logout
+                  </h2>
+
+                  <p className="text-sm text-gray-500">
+                    Are you sure you want to logout?
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="px-6 py-5">
+
+              {/* Logout All Devices Checkbox */}
+              <label
+                className={`
+                  flex items-start gap-3 p-4 rounded-xl border cursor-pointer
+                  transition-all duration-200
+                  ${
+                    logoutAll
+                      ? "border-red-200 bg-red-50"
+                      : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                  }
+                `}
+              >
+                <input
+                  type="checkbox"
+                  checked={logoutAll}
+                  onChange={(e) => setLogoutAll(e.target.checked)}
+                  disabled={isLoggingOut}
+                  className="mt-1 w-4 h-4 accent-red-600 cursor-pointer"
+                />
+
+                <div>
+                  <p className="text-sm font-medium text-gray-800">
+                    Logout from all devices
+                  </p>
+
+                  <p className="text-xs text-gray-500 mt-1">
+                    This will logout your account from all devices where you
+                    are currently signed in.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-100">
+
+              {/* Cancel */}
+              <button
+                type="button"
+                onClick={handleCancelLogout}
+                disabled={isLoggingOut}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-white border border-gray-200 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              {/* Confirm Logout */}
+              <button
+                type="button"
+                onClick={handleConfirmLogout}
+                disabled={isLoggingOut}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <FiLogOut className="w-4 h-4" />
+
+                {isLoggingOut
+                  ? "Logging out..."
+                  : logoutAll
+                    ? "Logout"
+                    : "Logout"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CSS Animations */}
       <style>{`
         @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
         }
+
         .animate-fadeIn {
           animation: fadeIn 0.2s ease-out;
         }
-        
+
         /* Custom scrollbar */
         ::-webkit-scrollbar {
           width: 4px;
         }
+
         ::-webkit-scrollbar-track {
           background: transparent;
         }
+
         ::-webkit-scrollbar-thumb {
           background: #d1d5db;
           border-radius: 2px;
         }
+
         ::-webkit-scrollbar-thumb:hover {
           background: #9ca3af;
         }
