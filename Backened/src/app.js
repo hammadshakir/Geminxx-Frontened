@@ -1,26 +1,48 @@
+// src/app.js
 import express from "express";
 import cors from "cors";
-import AppError from "../src/utils/Error.js"
-import devRouter from "./routes/dev.routes.js"
-import commentRouter from "./routes/comment.routes.js"
+import AppError from "./utils/Error.js";
+import devRouter from "./routes/dev.routes.js";
+import commentRouter from "./routes/comment.routes.js";
 import userRouter from "./routes/user.routes.js";
+import projectRouter from "./routes/project.routes.js";
+import chatRouter from "./routes/chat.routes.js";
 
+const app = express();
 
-const app = express()
+// ✅ CORS - Allow frontend
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 app.use(express.json());
-app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 
-app.use("/api",devRouter)
+// Routes
+app.use("/api", devRouter);
 app.use("/api", commentRouter);
-app.use("/api/user", userRouter);  
+app.use("/api/user", userRouter);
+app.use("/api/projects", projectRouter);
+app.use("/api/chat", chatRouter);
 
+// Health Check
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "OK",
+    message: "Server is running",
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 404 Handler
 app.use((req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
-// ==================== GLOBAL ERROR HANDLER ====================
+// Global Error Handler
 app.use((err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
@@ -70,4 +92,4 @@ app.use((err, req, res, next) => {
   }
 });
 
-export default app
+export default app;

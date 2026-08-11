@@ -26,7 +26,8 @@ import {
   FaInfoCircle,
   FaPalette,
   FaChartLine,
-  FaFlask
+  FaFlask,
+  FaEye
 } from "react-icons/fa";
 import { HiOutlineLightBulb } from "react-icons/hi";
 import { 
@@ -38,9 +39,13 @@ import {
 } from 'recharts';
 
 import CommentSection from '../components/CommentSection';
+import { useAuth } from '../context/AuthContext';
+
 export default function ViewProject() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user, hasRole } = useAuth();
+  
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -48,19 +53,46 @@ export default function ViewProject() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // 🔒 Permission checks
+  const userRole = user?.role || 'viewer';
+  const userId = user?.id || user?._id;
+  const isAdmin = userRole === 'admin';
+  const isClient = userRole === 'client';
+  const isTeamMember = userRole === 'team_member';
+  const isViewer = userRole === 'viewer';
+
+  // 🔒 Can edit? - Admin OR Client (only their own projects)
+  const canEdit = (projectData) => {
+    if (isAdmin) return true;
+    if (isClient) {
+      const clientId = projectData?.client?._id || projectData?.client;
+      return clientId === userId;
+    }
+    return false;
+  };
+
+  // 🔒 Can delete? - Only Admin
+  const canDelete = () => {
+    return isAdmin;
+  };
 
   useEffect(() => {
     const fetchProject = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:1000/api/projects/${id}`);
+        const token = localStorage.getItem('token');
+        const response = await fetch(`http://localhost:1000/api/projects/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         
         if (!response.ok) {
           throw new Error("Project not found");
         }
         
         const data = await response.json();
-        setProject(data);
+        setProject(data.project || data);
       } catch (error) {
         setError(error.message);
       } finally {
@@ -121,11 +153,24 @@ export default function ViewProject() {
   const categoryInfo = getCategoryInfo(project?.category);
   const CategoryIcon = categoryInfo.icon;
 
+  // 🔒 Check if user can edit this project
+  const userCanEdit = project ? canEdit(project) : false;
+  const userCanDelete = canDelete();
+
   const handleDelete = async () => {
+    if (!userCanDelete) {
+      alert("You don't have permission to delete this project");
+      return;
+    }
+    
     setDeleting(true);
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`http://localhost:1000/api/projects/${id}`, {
         method: "DELETE",
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       if (!response.ok) throw new Error("Failed to delete");
       navigate("/");
@@ -186,29 +231,61 @@ export default function ViewProject() {
         </button>
         
         <div className="flex items-center gap-2 flex-wrap">
+          {/* View-Only Badge */}
+          {isViewer && (
+            <span className="px-3 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium flex items-center gap-2">
+              <FaEye className="w-4 h-4" />
+              View-Only Mode
+            </span>
+          )}
+          
+          {isTeamMember && !userCanEdit && (
+            <span className="px-3 py-2 bg-blue-100 text-blue-600 rounded-xl text-sm font-medium flex items-center gap-2">
+              <FaUsers className="w-4 h-4" />
+              Team Member - Read Only
+            </span>
+          )}
+
           <button 
             onClick={() => setIsBookmarked(!isBookmarked)}
             className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200"
           >
             <FaBookmark className={`w-5 h-5 ${isBookmarked ? 'fill-indigo-600 text-indigo-600' : ''}`} />
           </button>
+          
           <button className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200">
             <FaShareAlt className="w-5 h-5" />
           </button>
-          <Link
-            to={`/projects/${id}/edit`}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
-          >
-            <FaEdit className="w-4 h-4" />
-            Edit Project
-          </Link>
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
-          >
-            <FaTrashAlt className="w-4 h-4" />
-            Delete
-          </button>
+
+          {/* 🔒 Edit Button - Only Admin and Client (their own projects) */}
+          {userCanEdit && (
+            <Link
+              to={`/projects/${id}/edit`}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
+            >
+              <FaEdit className="w-4 h-4" />
+              Edit Project
+            </Link>
+          )}
+
+          {/* 🔒 Delete Button - Only Admin */}
+          {userCanDelete && (
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
+            >
+              <FaTrashAlt className="w-4 h-4" />
+              Delete
+            </button>
+          )}
+
+          {/* Viewer/Team Member cannot Edit or Delete */}
+          {(isViewer || isTeamMember) && !userCanEdit && !userCanDelete && (
+            <span className="px-4 py-2 bg-gray-200 text-gray-500 rounded-xl text-sm font-medium flex items-center gap-2">
+              <FaEye className="w-4 h-4" />
+              View Only
+            </span>
+          )}
         </div>
       </div>
 
@@ -323,13 +400,13 @@ export default function ViewProject() {
                     <div>
                       <p className="text-xs text-gray-500">Total Tasks</p>
                       <p className="text-sm font-medium text-gray-700">24 tasks</p>
-
                     </div>
                   </div>
                 </div>
-                      <div className="mt-6">
-  <CommentSection projectId={id} />
-</div>
+
+                <div className="mt-6">
+                  <CommentSection projectId={id} />
+                </div>
               </div>
             </div>
           </div>
@@ -476,10 +553,8 @@ export default function ViewProject() {
                   )}
                 </button>
               </div>
-          
             </div>
           </div>
-
         </div>
       )}
 

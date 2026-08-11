@@ -6,10 +6,8 @@ import {
   Calendar, 
   Clock, 
   Users, 
-  Tag,
   CheckCircle,
   AlertCircle,
-  ArrowUpRight,
   MoreHorizontal,
   Share2,
   Bookmark,
@@ -17,11 +15,6 @@ import {
   ExternalLink,
   GitBranch,
   MessageSquare,
-  Laptop,
-  Palette,
-  BarChart3,
-  FlaskConical,
-  Folder,
   TrendingUp,
   Zap,
   Award,
@@ -32,24 +25,64 @@ import {
   Megaphone,
   Microscope,
   FolderKanban,
-  MessageCircle
+  MessageCircle,
+  Trash2
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import ProgressBar from './ProgressBar';
 import StatusBadge from './StatusBadge';
 
-export default function ProjectCard({ project }) {
+export default function ProjectCard({ 
+  project, 
+  canEdit = false, 
+  canDelete = false, 
+  isViewer = false,
+  userRole = 'viewer',
+  userId = null,
+  onDelete = null,
+  isDeleting = false
+}) {
   const [isHovered, setIsHovered] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
   const [loadingComments, setLoadingComments] = useState(false);
   
-  const daysUntilDeadline = Math.ceil(
-    (new Date(project.DeadLine) - new Date()) / (1000 * 60 * 60 * 24)
-  );
+  // 🔒 CRITICAL: Check permissions properly
+  const isAdmin = userRole === 'admin';
+  const isClient = userRole === 'client';
+  const isTeamMember = userRole === 'team_member';
   
-  const isOverdue = daysUntilDeadline < 0;
-  const isUrgent = daysUntilDeadline <= 3 && !isOverdue;
+  // 🔒 Check if user can edit THIS project
+  const canEditThisProject = () => {
+    // Admin can edit all projects
+    if (isAdmin) return true;
+    
+    // Client can edit ONLY their own projects
+    if (isClient) {
+      // Check if project.client is an object with _id
+      const clientId = project.client?._id || project.client;
+      return clientId === userId;
+    }
+    
+    // Others cannot edit
+    return false;
+  };
+  
+  // 🔒 Check if user can delete THIS project
+  const canDeleteThisProject = () => {
+    // Only admin can delete
+    return isAdmin;
+  };
+  
+  const isEditable = canEditThisProject();
+  const isDeletable = canDeleteThisProject();
+  
+  const daysUntilDeadline = project.DeadLine ? Math.ceil(
+    (new Date(project.DeadLine) - new Date()) / (1000 * 60 * 60 * 24)
+  ) : null;
+  
+  const isOverdue = daysUntilDeadline !== null && daysUntilDeadline < 0;
+  const isUrgent = daysUntilDeadline !== null && daysUntilDeadline <= 3 && !isOverdue;
   
   // Fetch comment count
   useEffect(() => {
@@ -82,7 +115,6 @@ export default function ProjectCard({ project }) {
   const deadlineStatus = getDeadlineStatus();
   const DeadlineIcon = deadlineStatus.icon;
   
-  // Get priority color
   const getPriorityColor = () => {
     const priority = project.priority || 'medium';
     switch(priority) {
@@ -94,7 +126,6 @@ export default function ProjectCard({ project }) {
     }
   };
 
-  // Get category icon and color
   const getCategoryInfo = () => {
     const category = project.category || 'other';
     const categories = {
@@ -110,7 +141,6 @@ export default function ProjectCard({ project }) {
   const categoryInfo = getCategoryInfo();
   const CategoryIcon = categoryInfo.icon;
 
-  // Get progress status
   const getProgressStatus = () => {
     const progress = project.progress || 0;
     if (progress === 100) return { label: 'Completed', color: 'text-emerald-600', icon: Award };
@@ -134,13 +164,6 @@ export default function ProjectCard({ project }) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Animated gradient overlay */}
-      <div className={`
-        absolute inset-0 bg-gradient-to-br from-indigo-50/20 to-purple-50/20 
-        opacity-0 transition-opacity duration-500 pointer-events-none
-        ${isHovered ? 'opacity-100' : ''}
-      `} />
-
       {/* Top colored bar */}
       <div className={`
         absolute top-0 left-0 right-0 h-1 
@@ -158,37 +181,41 @@ export default function ProjectCard({ project }) {
               <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-medium border ${getPriorityColor()}`}>
                 {project.priority || 'Medium'}
               </span>
+              {isViewer && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
+                  👁️ View Only
+                </span>
+              )}
+              {isTeamMember && !isEditable && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 font-medium">
+                  ⚡ Assigned
+                </span>
+              )}
             </div>
             <h3 className="text-base font-bold text-gray-800 truncate hover:text-indigo-600 transition-colors">
               {project.title}
             </h3>
           </div>
           
-          {/* Action buttons */}
-          <div className="flex items-center gap-0.5 flex-shrink-0">
-            <button 
-              onClick={() => setIsBookmarked(!isBookmarked)}
-              className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-all duration-200"
-              title="Bookmark"
-            >
-              <Star className={`w-4 h-4 ${isBookmarked ? 'fill-amber-500 text-amber-500' : ''}`} />
-            </button>
-            <button 
-              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
-              title="Share"
-            >
-              <Share2 className="w-4 h-4" />
-            </button>
-            <button 
-              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
-              title="More options"
-            >
-              <MoreHorizontal className="w-4 h-4" />
-            </button>
-          </div>
+          {/* Action buttons - Only for non-viewers */}
+          {!isViewer && (
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              <button 
+                onClick={() => setIsBookmarked(!isBookmarked)}
+                className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-all duration-200"
+              >
+                <Star className={`w-4 h-4 ${isBookmarked ? 'fill-amber-500 text-amber-500' : ''}`} />
+              </button>
+              <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
+                <Share2 className="w-4 h-4" />
+              </button>
+              <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Description */}
         <p className="text-sm text-gray-600 mt-2 line-clamp-2 leading-relaxed">
           {project.description || 'No description provided'}
         </p>
@@ -236,10 +263,12 @@ export default function ProjectCard({ project }) {
                 <p className="text-xs font-semibold text-gray-700 truncate">
                   {project.DeadLine ? new Date(project.DeadLine).toLocaleDateString() : 'N/A'}
                 </p>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
-                  <DeadlineIcon className="w-3 h-3" />
-                  {deadlineStatus.label}
-                </span>
+                {project.DeadLine && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
+                    <DeadlineIcon className="w-3 h-3" />
+                    {deadlineStatus.label}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -257,8 +286,7 @@ export default function ProjectCard({ project }) {
         </div>
         <ProgressBar progress={project.progress || 0} showLabel={false} />
         
-        {/* Days remaining */}
-        {!isOverdue && project.progress < 100 && project.DeadLine && (
+        {project.DeadLine && !isOverdue && project.progress < 100 && (
           <div className="flex items-center gap-1.5 mt-1.5">
             <Clock className="w-3 h-3 text-gray-400" />
             <span className="text-[10px] text-gray-400">
@@ -267,7 +295,7 @@ export default function ProjectCard({ project }) {
           </div>
         )}
         
-        {isOverdue && project.progress < 100 && (
+        {project.DeadLine && isOverdue && project.progress < 100 && (
           <div className="flex items-center gap-1.5 mt-1.5">
             <AlertCircle className="w-3 h-3 text-rose-400" />
             <span className="text-[10px] text-rose-500 font-medium">
@@ -277,29 +305,59 @@ export default function ProjectCard({ project }) {
         )}
       </div>
 
-      {/* Action buttons */}
+      {/* 🔒 ACTION BUTTONS - Based on permissions */}
       <div className="relative px-4 pb-4 pt-2 flex gap-2">
-        <Link 
-          to={`/projects/${project._id}`} 
-          className="flex-1"
-        >
+        {/* View Button - Everyone */}
+        <Link to={`/projects/${project._id}`} className="flex-1">
           <button className="w-full px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md">
             <Eye className="w-4 h-4" />
             View Details
           </button>
         </Link>
-        <Link 
-          to={`/projects/${project._id}/edit`}
-          className="flex-1"
-        >
-          <button className="w-full px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md">
-            <Edit className="w-4 h-4" />
-            Edit
+        
+        {/* 🔒 Edit Button - Only Admin and Client (their own projects) */}
+        {isEditable && (
+          <Link to={`/projects/${project._id}/edit`} className="flex-1">
+            <button className="w-full px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md">
+              <Edit className="w-4 h-4" />
+              Edit
+            </button>
+          </Link>
+        )}
+        
+        {/* 🔒 Delete Button - Only Admin */}
+        {isDeletable && onDelete && (
+          <button 
+            onClick={onDelete}
+            disabled={isDeleting}
+            className="px-4 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isDeleting ? (
+              <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
           </button>
-        </Link>
+        )}
+        
+        {/* 🔒 Team Member - View Only (No Edit/Delete) */}
+        {isTeamMember && !isEditable && !isDeletable && (
+          <div className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-500 rounded-xl text-sm font-medium flex items-center justify-center gap-2">
+            <Eye className="w-4 h-4" />
+            View Only
+          </div>
+        )}
+        
+        {/* 🔒 Viewer - View Only */}
+        {isViewer && (
+          <div className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-500 rounded-xl text-sm font-medium flex items-center justify-center gap-2">
+            <Eye className="w-4 h-4" />
+            View Only
+          </div>
+        )}
       </div>
 
-      {/* Footer with comments and info */}
+      {/* Footer */}
       <div className="relative px-4 pb-3 pt-0 border-t border-gray-100/50">
         <div className="flex items-center justify-between text-[10px] text-gray-400">
           <Link 

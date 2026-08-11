@@ -1,6 +1,6 @@
 // pages/Home.jsx
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutGrid,
   CheckCircle,
@@ -13,7 +13,6 @@ import {
   FolderOpen,
   Sparkles,
   ArrowUpRight,
-  ArrowDownRight,
   MoreHorizontal,
   Search,
   List,
@@ -22,20 +21,10 @@ import {
   Edit,
   Trash2,
   BarChart3,
-  PieChart,
-  Users,
-  Target,
   Activity,
-  Zap,
   Award,
-  Briefcase,
   Flag,
-  Star,
-  Bell,
-  MessageSquare,
-  Share2,
-  Bookmark,
-  ExternalLink,
+  Users,
 } from 'lucide-react';
 import {
   BarChart,
@@ -56,8 +45,11 @@ import SearchBar from '../components/SearchBar';
 import StatusBadge from '../components/StatusBadge';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { useAuth } from '../context/AuthContext';
 
 export default function Home() {
+  const location = useLocation();
+  const { user, hasRole } = useAuth();
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -65,9 +57,32 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedProject, setSelectedProject] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
 
-  // ---- Fetch ----
+  // 🔒 Permission checks - CRITICAL
+  const userRole = user?.role || 'viewer';
+  const userId = user?.id || user?._id;
+  const isAdmin = userRole === 'admin';
+  const isClient = userRole === 'client';
+  const isTeamMember = userRole === 'team_member';
+  const isViewer = userRole === 'viewer';
+  
+  // 🔒 Permissions
+  const canCreateProject = hasRole(['admin', 'client', 'team_member']);
+  const canEditProject = isAdmin || isClient;  // Admin and Client can edit
+  const canDeleteProject = isAdmin;  // Only Admin can delete
+
+  // Check for success message
+  useEffect(() => {
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message);
+      setTimeout(() => setSuccessMessage(''), 5000);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
+
+  // ---- Fetch Projects ----
   useEffect(() => {
     fetchProjects();
   }, []);
@@ -79,10 +94,16 @@ export default function Home() {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:1000/api/projects');
+      setError(null);
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:1000/api/projects', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!res.ok) throw new Error('Failed to fetch projects');
       const data = await res.json();
-      setProjects(data);
+      setProjects(data.projects || data || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -94,8 +115,8 @@ export default function Home() {
     let filtered = [...projects];
     if (searchTerm) {
       filtered = filtered.filter(p =>
-        p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.description.toLowerCase().includes(searchTerm.toLowerCase())
+        p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.description?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     if (filterStatus !== 'all') {
@@ -108,6 +129,37 @@ export default function Home() {
     setFilteredProjects(filtered);
   };
 
+  // ---- Delete Project ----
+  const handleDeleteProject = async (projectId, projectTitle) => {
+    if (!window.confirm(`Are you sure you want to delete "${projectTitle}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setDeletingId(projectId);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:1000/api/projects/${projectId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete project');
+      }
+
+      setSuccessMessage(`"${projectTitle}" deleted successfully!`);
+      setTimeout(() => setSuccessMessage(''), 5000);
+      fetchProjects();
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   // ---- Stats ----
   const total = projects.length;
   const completed = projects.filter(p => p.progress === 100).length;
@@ -116,60 +168,41 @@ export default function Home() {
     const deadline = new Date(p.DeadLine);
     return deadline < new Date() && p.progress < 100;
   }).length;
-  const onTrack = projects.filter(p => p.progress > 70 && p.progress < 100).length;
 
-  // Stats with proper icons
-  // In Home.jsx
-const statsData = [
-  { 
-    title: 'Total Projects', 
-    value: total, 
-    icon: 'project', 
-    color: 'indigo', 
-    trend: '+12%',
-    subtitle: 'Active'
-  },
-  { 
-    title: 'Completed', 
-    value: completed, 
-    icon: 'check', 
-    color: 'emerald', 
-    trend: '+8%',
-    subtitle: 'Done'
-  },
-  { 
-    title: 'In Progress', 
-    value: inProgress, 
-    icon: 'clock', 
-    color: 'amber', 
-    trend: '-2%',
-    subtitle: 'Working'
-  },
-  { 
-    title: 'Overdue', 
-    value: overdue, 
-    icon: 'warning', 
-    color: 'rose', 
-    trend: '+5%',
-    subtitle: 'Late'
-  },
-];
-
-// In return
-<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-  {statsData.map((stat, idx) => (
-    <StatsCard
-      key={idx}
-      title={stat.title}
-      value={stat.value}
-      icon={stat.icon}
-      color={stat.color}
-      trend={stat.trend}
-      subtitle={stat.subtitle}
-      animated
-    />
-  ))}
-</div>
+  const statsData = [
+    {
+      title: 'Total Projects',
+      value: total,
+      icon: 'project',
+      color: 'indigo',
+      trend: '+12%',
+      subtitle: 'Active'
+    },
+    {
+      title: 'Completed',
+      value: completed,
+      icon: 'check',
+      color: 'emerald',
+      trend: '+8%',
+      subtitle: 'Done'
+    },
+    {
+      title: 'In Progress',
+      value: inProgress,
+      icon: 'clock',
+      color: 'amber',
+      trend: '-2%',
+      subtitle: 'Working'
+    },
+    {
+      title: 'Overdue',
+      value: overdue,
+      icon: 'warning',
+      color: 'rose',
+      trend: '+5%',
+      subtitle: 'Late'
+    },
+  ];
 
   // ---- Chart Data ----
   const chartData = [
@@ -181,13 +214,13 @@ const statsData = [
   ];
   const chartColors = ['#94a3b8', '#f59e0b', '#3b82f6', '#8b5cf6', '#22c55e'];
 
-  // ---- Upcoming Deadlines (sorted) ----
+  // ---- Upcoming Deadlines ----
   const upcomingDeadlines = projects
     .filter(p => p.progress < 100)
     .sort((a, b) => new Date(a.DeadLine) - new Date(b.DeadLine))
     .slice(0, 5);
 
-  // ---- Recent Activity (dummy – can be replaced with real logs) ----
+  // ---- Recent Activity ----
   const recentActivities = [
     { project: 'E-commerce Platform', action: 'updated', time: '2 hours ago', color: 'blue' },
     { project: 'Mobile App Design', action: 'completed', time: '4 hours ago', color: 'green' },
@@ -213,6 +246,16 @@ const statsData = [
       <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* ----- Success Message ----- */}
+        {successMessage && (
+          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl animate-slideDown">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-emerald-500" />
+              <p className="text-emerald-700">{successMessage}</p>
+            </div>
+          </div>
+        )}
+
         {/* ----- Premium Hero Section ----- */}
         <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-indigo-500 to-blue-500 rounded-3xl p-8 md:p-10 mb-8 shadow-2xl">
           <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4yIj48cGF0aCBkPSJNMzYgMzR2LTRoNHY0aC00em0wIDB2LTRoLTR2NGg0eiIvPjwvZz48L2c+PC9zdmc+')]"></div>
@@ -220,29 +263,38 @@ const statsData = [
             <div className="text-white">
               <div className="flex items-center gap-2 text-sm font-medium bg-white/20 backdrop-blur-sm px-4 py-1.5 rounded-full w-fit mb-3">
                 <Sparkles className="w-4 h-4" />
-                <span>Welcome back, Admin</span>
+                <span>Welcome back, {isAdmin ? 'Admin' : user?.name || 'User'}</span>
               </div>
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
                 Let's build something amazing
               </h1>
               <p className="text-indigo-100 mt-1 max-w-md">
-                You have {total} projects across your workspace. 
+                You have {total} projects across your workspace.
                 {completed === total ? ' All completed! 🎉' : ` ${completed} completed so far.`}
               </p>
             </div>
             <div className="flex gap-4 flex-wrap">
-              <Link to="/new">
-                <button className="px-6 py-3 bg-white text-indigo-700 rounded-xl font-semibold shadow-lg hover:shadow-xl transition flex items-center gap-2 hover:scale-105">
-                  <Plus className="w-5 h-5" />
-                  New Project
-                </button>
-              </Link>
+              {/* 🔒 New Project Button - Only for Admin, Client, Team Member */}
+              {canCreateProject ? (
+                <Link to="/new">
+                  <button className="px-6 py-3 bg-white text-indigo-700 rounded-xl font-semibold shadow-lg hover:shadow-xl transition flex items-center gap-2 hover:scale-105">
+                    <Plus className="w-5 h-5" />
+                    New Project
+                  </button>
+                </Link>
+              ) : (
+                <div className="px-6 py-3 bg-white/10 backdrop-blur-sm text-white rounded-xl font-semibold border border-white/20 flex items-center gap-2">
+                  <Eye className="w-5 h-5" />
+                   View-Only Mode
+                </div>
+              )}
               <button className="px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-xl font-semibold hover:bg-white/30 transition flex items-center gap-2">
                 <BarChart3 className="w-5 h-5" />
                 Analytics
               </button>
             </div>
           </div>
+
           {/* Quick stats mini */}
           <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-6 border-t border-white/20">
             <div className="flex items-center gap-3">
@@ -284,7 +336,7 @@ const statsData = [
           </div>
         </div>
 
-        {/* ----- Stats Cards with Trends ----- */}
+        {/* ----- Stats Cards ----- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
           {statsData.map((stat, idx) => (
             <StatsCard
@@ -295,15 +347,14 @@ const statsData = [
               color={stat.color}
               trend={stat.trend}
               subtitle={stat.subtitle}
-              metric={stat.metric}
               animated
             />
           ))}
         </div>
 
-        {/* ----- Two-column layout: Chart + Upcoming Deadlines ----- */}
+        {/* ----- Charts Section ----- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Chart takes 2/3 */}
+          {/* Chart */}
           <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -333,7 +384,7 @@ const statsData = [
             </div>
           </div>
 
-          {/* Upcoming Deadlines (1/3) */}
+          {/* Upcoming Deadlines */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -376,7 +427,7 @@ const statsData = [
           </div>
         </div>
 
-        {/* ----- Recent Activity Feed ----- */}
+        {/* ----- Recent Activity ----- */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -442,7 +493,7 @@ const statsData = [
               <option value="starting">🔰 Starting</option>
               <option value="notstarted">📋 Not Started</option>
             </select>
-            
+
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <span className="hidden sm:inline">|</span>
               <span>{filteredProjects.length} projects</span>
@@ -483,20 +534,41 @@ const statsData = [
             <p className="text-gray-400 mt-1">
               {searchTerm
                 ? 'Try adjusting your search or filters'
-                : 'Create your first project and start managing your workflow'}
+                : canCreateProject
+                  ? 'Create your first project and start managing your workflow'
+                  : 'No projects available to view'}
             </p>
-            <Link to="/new">
-              <button className="mt-4 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition shadow-sm flex items-center gap-2 mx-auto">
-                <Plus className="w-4 h-4" />
-                Create Project
-              </button>
-            </Link>
+            {canCreateProject && (
+              <Link to="/new">
+                <button className="mt-4 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition shadow-sm flex items-center gap-2 mx-auto">
+                  <Plus className="w-4 h-4" />
+                  Create Project
+                </button>
+              </Link>
+            )}
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProjects.map((project) => (
-              <ProjectCard key={project._id} project={project} />
-            ))}
+            {filteredProjects.map((project) => {
+              // 🔒 CRITICAL: Calculate permissions per project
+              const clientId = project.client?._id || project.client;
+              const canEditThis = isAdmin || (isClient && clientId === userId);
+              const canDeleteThis = isAdmin;
+              
+              return (
+                <ProjectCard
+                  key={project._id}
+                  project={project}
+                  canEdit={canEditThis}
+                  canDelete={canDeleteThis}
+                  isViewer={isViewer}
+                  userRole={userRole}
+                  userId={userId}
+                  onDelete={() => handleDeleteProject(project._id, project.title)}
+                  isDeleting={deletingId === project._id}
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -531,57 +603,105 @@ const statsData = [
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredProjects.map((project) => (
-                    <tr key={project._id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">{project.title}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500 truncate max-w-xs hidden md:table-cell">
-                        {project.description}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {new Date(project.DeadLine).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4">
-                        <StatusBadge progress={project.progress} />
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all"
-                              style={{ width: `${project.progress}%` }}
-                            ></div>
+                  {filteredProjects.map((project) => {
+                    // 🔒 CRITICAL: Calculate permissions per project
+                    const clientId = project.client?._id || project.client;
+                    const canEditThis = isAdmin || (isClient && clientId === userId);
+                    const canDeleteThis = isAdmin;
+                    
+                    return (
+                      <tr key={project._id} className="hover:bg-gray-50 transition">
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{project.title}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500 truncate max-w-xs hidden md:table-cell">
+                          {project.description}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {project.DeadLine ? new Date(project.DeadLine).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <StatusBadge progress={project.progress} />
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-20 bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all"
+                                style={{ width: `${project.progress || 0}%` }}
+                              />
+                            </div>
+                            <span className="text-sm text-gray-600">{project.progress || 0}%</span>
                           </div>
-                          <span className="text-sm text-gray-600">{project.progress}%</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-2">
-                          <Link to={`/projects/${project._id}`}>
-                            <button className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition flex items-center gap-1">
-                              <Eye className="w-3 h-3" />
-                              View
-                            </button>
-                          </Link>
-                          <Link to={`/projects/${project._id}/edit`}>
-                            <button className="px-3 py-1.5 text-xs bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition flex items-center gap-1">
-                              <Edit className="w-3 h-3" />
-                              Edit
-                            </button>
-                          </Link>
-                          <button className="px-3 py-1.5 text-xs bg-rose-500 hover:bg-rose-600 text-white rounded-lg transition flex items-center gap-1">
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-2">
+                            {/* View - Everyone */}
+                            <Link to={`/projects/${project._id}`}>
+                              <button className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition flex items-center gap-1">
+                                <Eye className="w-3 h-3" />
+                                View
+                              </button>
+                            </Link>
+
+                            {/* 🔒 Edit - Only Admin and Client (their own projects) */}
+                            {canEditThis && (
+                              <Link to={`/projects/${project._id}/edit`}>
+                                <button className="px-3 py-1.5 text-xs bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition flex items-center gap-1">
+                                  <Edit className="w-3 h-3" />
+                                  Edit
+                                </button>
+                              </Link>
+                            )}
+
+                            {/* 🔒 Delete - Only Admin */}
+                            {canDeleteThis && (
+                              <button
+                                onClick={() => handleDeleteProject(project._id, project.title)}
+                                disabled={deletingId === project._id}
+                                className="px-3 py-1.5 text-xs bg-rose-500 hover:bg-rose-600 text-white rounded-lg transition flex items-center gap-1 disabled:opacity-50"
+                              >
+                                {deletingId === project._id ? (
+                                  <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-3 h-3" />
+                                )}
+                              </button>
+                            )}
+
+                            {/* Viewer/Team Member - View Only */}
+                            {(isViewer || isTeamMember) && !canEditThis && !canDeleteThis && (
+                              <span className="px-3 py-1.5 text-xs bg-gray-200 text-gray-500 rounded-lg">
+                                 View Only
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
         )}
       </main>
+
       <Footer />
+
+      <style>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-slideDown {
+          animation: slideDown 0.3s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 }

@@ -1,5 +1,5 @@
-// src/pages/AddPage.jsx
-import { useState } from "react";
+// pages/AddPage.jsx
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   FaSpinner, 
@@ -16,14 +16,15 @@ import {
   FaChartLine,
   FaFlask,
   FaTag,
-  FaArrowLeft
+  FaArrowLeft,
+  FaEye
 } from "react-icons/fa";
 import { HiOutlineLightBulb } from "react-icons/hi";
-// import Navbar from "../components/Navbar";
-// import Footer from "../components/Footer";
+import { useAuth } from "../context/AuthContext";
 
 export default function AddPage() {
   const navigate = useNavigate();
+  const { user, hasRole } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
@@ -38,6 +39,41 @@ export default function AddPage() {
   const [submitError, setSubmitError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [touchedFields, setTouchedFields] = useState({});
+
+  // 🔒 Check if user can create projects
+  const canCreate = hasRole(['admin', 'client', 'team_member']);
+
+  // Redirect if viewer
+  useEffect(() => {
+    if (!canCreate) {
+      navigate("/", { 
+        state: { 
+          error: "You don't have permission to create projects." 
+        } 
+      });
+    }
+  }, [canCreate, navigate]);
+
+  // If viewer, show access denied
+  if (!canCreate) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md px-4">
+          <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FaEye className="w-10 h-10 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-500 mb-4">You don't have permission to create projects.</p>
+          <button
+            onClick={() => navigate("/")}
+            className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition"
+          >
+            Go Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Progress options with labels and colors
   const progressOptions = [
@@ -110,7 +146,6 @@ export default function AddPage() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     
-    // Clear error for this field when user types
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -128,16 +163,13 @@ export default function AddPage() {
     setSubmitError(null);
     setSuccess(false);
 
-    // Mark all fields as touched
     const allTouched = {};
     Object.keys(formData).forEach(key => {
       allTouched[key] = true;
     });
     setTouchedFields(allTouched);
 
-    // Full validation
     if (!validateForm()) {
-      // Scroll to first error
       const firstError = document.querySelector('[data-error="true"]');
       if (firstError) {
         firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -149,9 +181,13 @@ export default function AddPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:1000/api/new/project", {
+      const token = localStorage.getItem('token');
+      const response = await fetch("http://localhost:1000/api/projects", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify(formData),
       });
 
@@ -161,10 +197,8 @@ export default function AddPage() {
         throw new Error(result.message || result.error || "Failed to add project");
       }
 
-      // Show success
       setSuccess(true);
       
-      // Navigate after short delay
       setTimeout(() => {
         navigate("/", { 
           state: { 
@@ -180,333 +214,328 @@ export default function AddPage() {
   };
 
   return (
-    <>
-      {/* <Navbar /> */}
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30 py-8 md:py-12 px-4">
-        <div className="max-w-3xl mx-auto">
-          {/* Back Button */}
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-all duration-300 mb-6 group"
-          >
-            <FaArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            <span className="text-sm font-medium">Back to Dashboard</span>
-          </button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30 py-8 md:py-12 px-4">
+      <div className="max-w-3xl mx-auto">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-all duration-300 mb-6 group"
+        >
+          <FaArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          <span className="text-sm font-medium">Back to Dashboard</span>
+        </button>
 
-          {/* Header with Animation */}
-          <div className="text-center mb-8 animate-fadeIn">
-            <div className="inline-flex items-center justify-center p-3 bg-blue-100 rounded-2xl mb-4">
-              <FaRocket className="w-8 h-8 text-blue-600" />
-            </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
-              Create New Project
-            </h1>
-            <p className="text-gray-500 mt-2 text-lg">
-              Launch your next big idea in minutes
-            </p>
+        {/* Header with Animation */}
+        <div className="text-center mb-8 animate-fadeIn">
+          <div className="inline-flex items-center justify-center p-3 bg-blue-100 rounded-2xl mb-4">
+            <FaRocket className="w-8 h-8 text-blue-600" />
           </div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
+            Create New Project
+          </h1>
+          <p className="text-gray-500 mt-2 text-lg">
+            Launch your next big idea in minutes
+          </p>
+        </div>
 
-          {/* Success Alert */}
-          {success && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl animate-slideDown">
-              <div className="flex items-center gap-3">
-                <FaCheckCircle className="w-6 h-6 text-green-500" />
-                <div>
-                  <h4 className="font-semibold text-green-700">Project Created!</h4>
-                  <p className="text-sm text-green-600">Redirecting to dashboard...</p>
-                </div>
+        {/* Success Alert */}
+        {success && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl animate-slideDown">
+            <div className="flex items-center gap-3">
+              <FaCheckCircle className="w-6 h-6 text-green-500" />
+              <div>
+                <h4 className="font-semibold text-green-700">Project Created!</h4>
+                <p className="text-sm text-green-600">Redirecting to dashboard...</p>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Global submit error */}
-          {submitError && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl animate-slideDown">
-              <div className="flex items-center gap-3">
-                <FaTimesCircle className="w-6 h-6 text-red-500" />
-                <div>
-                  <h4 className="font-semibold text-red-700">Error</h4>
-                  <p className="text-sm text-red-600">{submitError}</p>
-                </div>
+        {/* Global submit error */}
+        {submitError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl animate-slideDown">
+            <div className="flex items-center gap-3">
+              <FaTimesCircle className="w-6 h-6 text-red-500" />
+              <div>
+                <h4 className="font-semibold text-red-700">Error</h4>
+                <p className="text-sm text-red-600">{submitError}</p>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Form Card */}
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 transition-all duration-300 hover:shadow-2xl">
-            <div className="p-6 md:p-8">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Title */}
+        {/* Form Card */}
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 transition-all duration-300 hover:shadow-2xl">
+          <div className="p-6 md:p-8">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Project Title <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Enter a descriptive project title"
+                    data-error={!!errors.title}
+                    className={`w-full px-4 py-3 pl-11 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                      errors.title && touchedFields.title 
+                        ? "border-red-500 bg-red-50" 
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  />
+                  <FaProjectDiagram className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  {errors.title && touchedFields.title && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <FaExclamationCircle className="w-5 h-5 text-red-500" />
+                    </div>
+                  )}
+                </div>
+                {errors.title && touchedFields.title && (
+                  <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1 animate-slideDown">
+                    <FaInfoCircle className="w-4 h-4" />
+                    {errors.title}
+                  </p>
+                )}
+                <p className="mt-1 text-xs text-gray-400">
+                  {formData.title.length}/100 characters
+                </p>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Description <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <textarea
+                    name="description"
+                    rows="4"
+                    value={formData.description}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Describe your project in detail..."
+                    data-error={!!errors.description}
+                    className={`w-full px-4 py-3 pl-11 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-y ${
+                      errors.description && touchedFields.description
+                        ? "border-red-500 bg-red-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  />
+                  <FaTasks className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                  {errors.description && touchedFields.description && (
+                    <div className="absolute right-3 top-3">
+                      <FaExclamationCircle className="w-5 h-5 text-red-500" />
+                    </div>
+                  )}
+                </div>
+                {errors.description && touchedFields.description && (
+                  <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1 animate-slideDown">
+                    <FaInfoCircle className="w-4 h-4" />
+                    {errors.description}
+                  </p>
+                )}
+                <p className="mt-1 text-xs text-gray-400">
+                  {formData.description.length}/500 characters
+                </p>
+              </div>
+
+              {/* Dates */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    Project Title <span className="text-red-500">*</span>
+                    Start Date
                   </label>
                   <div className="relative">
                     <input
-                      type="text"
-                      name="title"
-                      value={formData.title}
+                      type="date"
+                      name="startingDate"
+                      value={formData.startingDate}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder="Enter a descriptive project title"
-                      data-error={!!errors.title}
                       className={`w-full px-4 py-3 pl-11 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
-                        errors.title && touchedFields.title 
-                          ? "border-red-500 bg-red-50" 
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                    />
-                    <FaProjectDiagram className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    {errors.title && touchedFields.title && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        <FaExclamationCircle className="w-5 h-5 text-red-500" />
-                      </div>
-                    )}
-                  </div>
-                  {errors.title && touchedFields.title && (
-                    <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1 animate-slideDown">
-                      <FaInfoCircle className="w-4 h-4" />
-                      {errors.title}
-                    </p>
-                  )}
-                  <p className="mt-1 text-xs text-gray-400">
-                    {formData.title.length}/100 characters
-                  </p>
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    Description <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <textarea
-                      name="description"
-                      rows="4"
-                      value={formData.description}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      placeholder="Describe your project in detail..."
-                      data-error={!!errors.description}
-                      className={`w-full px-4 py-3 pl-11 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-y ${
-                        errors.description && touchedFields.description
+                        errors.startingDate && touchedFields.startingDate
                           ? "border-red-500 bg-red-50"
                           : "border-gray-200 hover:border-gray-300"
                       }`}
                     />
-                    <FaTasks className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
-                    {errors.description && touchedFields.description && (
-                      <div className="absolute right-3 top-3">
-                        <FaExclamationCircle className="w-5 h-5 text-red-500" />
-                      </div>
-                    )}
+                    <FaCalendarAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                   </div>
-                  {errors.description && touchedFields.description && (
+                  {errors.startingDate && touchedFields.startingDate && (
                     <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1 animate-slideDown">
                       <FaInfoCircle className="w-4 h-4" />
-                      {errors.description}
+                      {errors.startingDate}
                     </p>
                   )}
-                  <p className="mt-1 text-xs text-gray-400">
-                    {formData.description.length}/500 characters
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Deadline <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      name="DeadLine"
+                      value={formData.DeadLine}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className={`w-full px-4 py-3 pl-11 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                        errors.DeadLine && touchedFields.DeadLine
+                          ? "border-red-500 bg-red-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    />
+                    <FaCalendarAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  </div>
+                  {errors.DeadLine && touchedFields.DeadLine && (
+                    <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1 animate-slideDown">
+                      <FaInfoCircle className="w-4 h-4" />
+                      {errors.DeadLine}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Progress and Priority */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Progress
+                  </label>
+                  <select
+                    name="progress"
+                    value={formData.progress}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-300"
+                  >
+                    {progressOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
+                      style={{ width: `${formData.progress}%` }}
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-400 text-right">
+                    {formData.progress}% complete
                   </p>
                 </div>
 
-                {/* Dates */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      Start Date
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="date"
-                        name="startingDate"
-                        value={formData.startingDate}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        className={`w-full px-4 py-3 pl-11 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
-                          errors.startingDate && touchedFields.startingDate
-                            ? "border-red-500 bg-red-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                      />
-                      <FaCalendarAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    </div>
-                    {errors.startingDate && touchedFields.startingDate && (
-                      <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1 animate-slideDown">
-                        <FaInfoCircle className="w-4 h-4" />
-                        {errors.startingDate}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      Deadline <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="date"
-                        name="DeadLine"
-                        value={formData.DeadLine}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        className={`w-full px-4 py-3 pl-11 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
-                          errors.DeadLine && touchedFields.DeadLine
-                            ? "border-red-500 bg-red-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                      />
-                      <FaCalendarAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    </div>
-                    {errors.DeadLine && touchedFields.DeadLine && (
-                      <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1 animate-slideDown">
-                        <FaInfoCircle className="w-4 h-4" />
-                        {errors.DeadLine}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Progress and Priority */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      Progress
-                    </label>
-                    <select
-                      name="progress"
-                      value={formData.progress}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-300"
-                    >
-                      {progressOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    {/* Progress bar preview */}
-                    <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
-                        style={{ width: `${formData.progress}%` }}
-                      />
-                    </div>
-                    <p className="mt-1 text-xs text-gray-400 text-right">
-                      {formData.progress}% complete
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      Priority
-                    </label>
-                    <select
-                      name="priority"
-                      value={formData.priority}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-300"
-                    >
-                      {priorityOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="mt-2">
-                      <span className={`text-xs px-3 py-1 rounded-full ${
-                        priorityOptions.find(p => p.value === formData.priority)?.color || ""
-                      }`}>
-                        {priorityOptions.find(p => p.value === formData.priority)?.label || "Medium"} Priority
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Category */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    Category
+                    Priority
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                    {categoryOptions.map((category) => {
-                      const Icon = category.icon;
-                      return (
-                        <button
-                          key={category.value}
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, category: category.value }))}
-                          className={`py-3 px-2 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-1.5 ${
-                            formData.category === category.value
-                              ? "border-blue-500 bg-blue-50 text-blue-700 shadow-md transform scale-105"
-                              : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                          }`}
-                        >
-                          <Icon className={`w-6 h-6 ${
-                            formData.category === category.value 
-                              ? "text-blue-600" 
-                              : category.color
-                          }`} />
-                          <span className="text-xs font-medium">{category.label}</span>
-                        </button>
-                      );
-                    })}
+                  <select
+                    name="priority"
+                    value={formData.priority}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-300"
+                  >
+                    {priorityOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="mt-2">
+                    <span className={`text-xs px-3 py-1 rounded-full ${
+                      priorityOptions.find(p => p.value === formData.priority)?.color || ""
+                    }`}>
+                      {priorityOptions.find(p => p.value === formData.priority)?.label || "Medium"} Priority
+                    </span>
                   </div>
                 </div>
+              </div>
 
-                {/* Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className={`flex-1 py-3.5 px-6 rounded-xl font-semibold text-white transition-all duration-300 flex items-center justify-center gap-2 ${
-                      loading
-                        ? "bg-blue-400 cursor-not-allowed"
-                        : "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 hover:shadow-lg hover:scale-102 active:scale-98"
-                    }`}
-                  >
-                    {loading ? (
-                      <>
-                        <FaSpinner className="w-5 h-5 animate-spin" />
-                        <span>Creating Project...</span>
-                      </>
-                    ) : (
-                      <>
-                        <FaRocket className="w-5 h-5" />
-                        <span>Launch Project</span>
-                      </>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate("/")}
-                    className="flex-1 py-3.5 px-6 rounded-xl font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 hover:shadow-md transition-all duration-300 hover:scale-102 active:scale-98"
-                  >
-                    Cancel
-                  </button>
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Category
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {categoryOptions.map((category) => {
+                    const Icon = category.icon;
+                    return (
+                      <button
+                        key={category.value}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, category: category.value }))}
+                        className={`py-3 px-2 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-1.5 ${
+                          formData.category === category.value
+                            ? "border-blue-500 bg-blue-50 text-blue-700 shadow-md transform scale-105"
+                            : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        <Icon className={`w-6 h-6 ${
+                          formData.category === category.value 
+                            ? "text-blue-600" 
+                            : category.color
+                        }`} />
+                        <span className="text-xs font-medium">{category.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
+              </div>
 
-                {/* Form tips */}
-                <div className="mt-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
-                  <div className="flex items-start gap-2">
-                    <HiOutlineLightBulb className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <h5 className="text-sm font-medium text-blue-700">Pro Tips:</h5>
-                      <ul className="mt-1 text-xs text-blue-600 space-y-0.5 list-disc list-inside">
-                        <li>Use a clear, descriptive title for better project management</li>
-                        <li>Set realistic deadlines to keep your team on track</li>
-                        <li>Update progress regularly to monitor project health</li>
-                      </ul>
-                    </div>
+              {/* Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`flex-1 py-3.5 px-6 rounded-xl font-semibold text-white transition-all duration-300 flex items-center justify-center gap-2 ${
+                    loading
+                      ? "bg-blue-400 cursor-not-allowed"
+                      : "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 hover:shadow-lg hover:scale-102 active:scale-98"
+                  }`}
+                >
+                  {loading ? (
+                    <>
+                      <FaSpinner className="w-5 h-5 animate-spin" />
+                      <span>Creating Project...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaRocket className="w-5 h-5" />
+                      <span>Launch Project</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate("/")}
+                  className="flex-1 py-3.5 px-6 rounded-xl font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 hover:shadow-md transition-all duration-300 hover:scale-102 active:scale-98"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              {/* Form tips */}
+              <div className="mt-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
+                <div className="flex items-start gap-2">
+                  <HiOutlineLightBulb className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h5 className="text-sm font-medium text-blue-700">Pro Tips:</h5>
+                    <ul className="mt-1 text-xs text-blue-600 space-y-0.5 list-disc list-inside">
+                      <li>Use a clear, descriptive title for better project management</li>
+                      <li>Set realistic deadlines to keep your team on track</li>
+                      <li>Update progress regularly to monitor project health</li>
+                    </ul>
                   </div>
                 </div>
-              </form>
-            </div>
+              </div>
+            </form>
           </div>
         </div>
       </div>
-      {/* <Footer /> */}
-    </>
+    </div>
   );
 }

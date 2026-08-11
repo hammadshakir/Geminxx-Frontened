@@ -1,3 +1,4 @@
+// pages/Register.jsx
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { registerUser } from "../services/authApi";
@@ -9,6 +10,7 @@ const Register = () => {
     name: "",
     email: "",
     password: "",
+    role: "viewer",
   });
 
   const [loading, setLoading] = useState(false);
@@ -35,11 +37,8 @@ const Register = () => {
 
     try {
       setLoading(true);
-
       const response = await registerUser(form);
-
       sessionStorage.setItem("verifyEmail", form.email);
-
       setSuccess(response.message);
 
       setTimeout(() => {
@@ -52,36 +51,29 @@ const Register = () => {
     }
   };
 
+  const roles = [
+    { value: "viewer", label: "Viewer - Read only access" },
+    { value: "team_member", label: "Team Member - Can work on tasks" },
+    { value: "client", label: "Client - Can create and manage tasks" },
+    { value: "admin", label: "Admin - Full access" },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 flex items-center justify-center px-4 py-10">
-
       <div className="w-full max-w-md">
-
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white text-2xl font-bold shadow-lg">
             G
           </div>
-
-          <h1 className="text-3xl font-bold text-gray-900 mt-4">
-            Gemnixx
-          </h1>
-
-          <p className="text-gray-500 mt-1">
-            Project Management
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900 mt-4">Gemnixx</h1>
+          <p className="text-gray-500 mt-1">Project Management</p>
         </div>
 
         {/* Card */}
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
-
-          <h2 className="text-2xl font-bold text-gray-900">
-            Create your account
-          </h2>
-
-          <p className="text-gray-500 mt-2 mb-7">
-            Join Gemnixx and manage your projects easily.
-          </p>
+          <h2 className="text-2xl font-bold text-gray-900">Create your account</h2>
+          <p className="text-gray-500 mt-2 mb-7">Join Gemnixx and manage your projects easily.</p>
 
           {error && (
             <div className="mb-5 rounded-xl bg-red-50 border border-red-200 text-red-600 px-4 py-3 text-sm">
@@ -96,12 +88,8 @@ const Register = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name
-              </label>
-
+              <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
               <input
                 type="text"
                 name="name"
@@ -113,10 +101,7 @@ const Register = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email
-              </label>
-
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
               <input
                 type="email"
                 name="email"
@@ -128,10 +113,7 @@ const Register = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-
+              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
               <input
                 type="password"
                 name="password"
@@ -142,6 +124,22 @@ const Register = () => {
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+              <select
+                name="role"
+                value={form.role}
+                onChange={handleChange}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+              >
+                {roles.map((role) => (
+                  <option key={role.value} value={role.value}>
+                    {role.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
@@ -149,19 +147,14 @@ const Register = () => {
             >
               {loading ? "Creating account..." : "Create Account"}
             </button>
-
           </form>
 
           <p className="text-center text-sm text-gray-500 mt-7">
             Already have an account?{" "}
-            <Link
-              to="/login"
-              className="font-semibold text-indigo-600 hover:text-indigo-700"
-            >
+            <Link to="/login" className="font-semibold text-indigo-600 hover:text-indigo-700">
               Login
             </Link>
           </p>
-
         </div>
       </div>
     </div>
