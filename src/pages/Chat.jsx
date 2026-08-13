@@ -478,7 +478,7 @@ export default function Chat() {
         }`}>
           <span className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-            {isConnected ? '🟢 Connected to chat server' : '🔴 Disconnected - Trying to reconnect...'}
+            {isConnected ? ' Connected to chat server' : ' Disconnected - Trying to reconnect...'}
           </span>
           {!isConnected && (
             <button 

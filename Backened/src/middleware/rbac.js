@@ -19,6 +19,7 @@ export const hasRole = (roles) => {
 };
 
 export const isAdmin = hasRole(['admin']);
+
 export const isClient = hasRole(['admin', 'client']);
 export const isTeamMember = hasRole(['admin', 'client', 'team_member']);
 

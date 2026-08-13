@@ -1,4 +1,4 @@
-// src/app.js
+// app.js
 import express from "express";
 import cors from "cors";
 import AppError from "./utils/Error.js";
@@ -7,10 +7,10 @@ import commentRouter from "./routes/comment.routes.js";
 import userRouter from "./routes/user.routes.js";
 import projectRouter from "./routes/project.routes.js";
 import chatRouter from "./routes/chat.routes.js";
+import taskRouter from "./routes/task.routes.js";  // ✅ Add this
 
 const app = express();
 
-// ✅ CORS - Allow frontend
 app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
   credentials: true,
@@ -27,6 +27,7 @@ app.use("/api", commentRouter);
 app.use("/api/user", userRouter);
 app.use("/api/projects", projectRouter);
 app.use("/api/chat", chatRouter);
+app.use("/api/tasks", taskRouter);  // ✅ Add this
 
 // Health Check
 app.get("/api/health", (req, res) => {

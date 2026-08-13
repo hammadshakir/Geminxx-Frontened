@@ -21,6 +21,10 @@ import {
   FiClipboard,
   FiMessageSquare,
   FiTrendingUp,
+  FiActivity,
+  FiCheckCircle,
+  FiClock,
+  FiAlertCircle,
 } from "react-icons/fi";
 import {
   FaRocket,
@@ -39,6 +43,16 @@ export default function Sidebar() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [logoutAll, setLogoutAll] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // ✅ State for real data
+  const [stats, setStats] = useState({
+    projects: 0,
+    tasks: 0,
+    teamMembers: 0,
+    clients: 0,
+    notifications: 0,
+    loading: true,
+  });
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -68,6 +82,55 @@ export default function Sidebar() {
       })
     );
   }, [isCollapsed]);
+
+  // ✅ Fetch real data
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        // Fetch projects
+        const projectsRes = await fetch('http://localhost:1000/api/projects', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const projectsData = await projectsRes.json();
+        const projects = projectsData.projects || projectsData || [];
+
+        // Fetch tasks
+        const tasksRes = await fetch('http://localhost:1000/api/tasks', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const tasksData = await tasksRes.json();
+        const tasks = tasksData.tasks || tasksData || [];
+
+        // Fetch users (for team members and clients)
+        const usersRes = await fetch('http://localhost:1000/api/user/all', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const usersData = await usersRes.json();
+        const users = usersData.users || [];
+
+        // Count team members and clients
+        const teamMembers = users.filter(u => u.role === 'team_member');
+        const clients = users.filter(u => u.role === 'client');
+
+        setStats({
+          projects: projects.length,
+          tasks: tasks.length,
+          teamMembers: teamMembers.length,
+          clients: clients.length,
+          notifications: Math.floor(Math.random() * 5) + 1, // Placeholder
+          loading: false,
+        });
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+        setStats(prev => ({ ...prev, loading: false }));
+      }
+    };
+
+    fetchStats();
+  }, []);
 
   // Role-based navigation items
   const getNavItems = () => {
@@ -156,49 +219,64 @@ export default function Sidebar() {
 
   const navItems = getNavItems();
 
-  // Quick stats - dynamic based on role
+  // ✅ Quick stats with REAL data
   const getQuickStats = () => {
-    const stats = [];
+    const statsList = [];
 
     // Projects - visible to all
-    stats.push({ 
-      label: "Projects", 
-      value: "12", 
-      icon: FiFolder, 
-      color: "blue" 
+    statsList.push({
+      label: "Projects",
+      value: stats.projects,
+      icon: FiFolder,
+      color: "blue",
+      count: stats.projects,
     });
 
     // Tasks - visible to admin, client, team_member
     if (hasRole(['admin', 'client', 'team_member'])) {
-      stats.push({ 
-        label: "Tasks", 
-        value: "48", 
-        icon: FaTasks, 
-        color: "green" 
+      statsList.push({
+        label: "Tasks",
+        value: stats.tasks,
+        icon: FaTasks,
+        color: "green",
+        count: stats.tasks,
       });
     }
 
-    // Team - visible to admin and team_member
+    // Team Members - visible to admin and team_member
     if (hasRole(['admin', 'team_member'])) {
-      stats.push({ 
-        label: "Team", 
-        value: "8", 
-        icon: FiUsers, 
-        color: "purple" 
+      statsList.push({
+        label: "Team",
+        value: stats.teamMembers,
+        icon: FiUsers,
+        color: "purple",
+        count: stats.teamMembers,
+      });
+    }
+
+    // Clients - visible to admin
+    if (hasRole(['admin'])) {
+      statsList.push({
+        label: "Clients",
+        value: stats.clients,
+        icon: FaUserFriends,
+        color: "indigo",
+        count: stats.clients,
       });
     }
 
     // If no stats, add default
-    if (stats.length === 0) {
-      stats.push({ 
-        label: "Projects", 
-        value: "0", 
-        icon: FiFolder, 
-        color: "blue" 
+    if (statsList.length === 0) {
+      statsList.push({
+        label: "Projects",
+        value: stats.projects,
+        icon: FiFolder,
+        color: "blue",
+        count: stats.projects,
       });
     }
 
-    return stats;
+    return statsList;
   };
 
   const quickStats = getQuickStats();
@@ -339,10 +417,10 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* Quick Stats - Only when expanded */}
+        {/* ✅ Quick Stats with REAL data */}
         {!isCollapsed && quickStats.length > 0 && (
           <div className="px-3 py-3 border-b border-gray-200">
-            <div className={`grid ${quickStats.length === 1 ? 'grid-cols-1' : quickStats.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} gap-1.5`}>
+            <div className={`grid ${quickStats.length === 1 ? 'grid-cols-1' : quickStats.length === 2 ? 'grid-cols-2' : quickStats.length === 3 ? 'grid-cols-3' : 'grid-cols-4'} gap-1.5`}>
               {quickStats.map((stat) => {
                 const Icon = stat.icon;
                 return (
@@ -351,7 +429,7 @@ export default function Sidebar() {
                     className={`rounded-lg p-2 text-center ${getStatColor(stat.color)} transition-all hover:scale-105 cursor-default`}
                   >
                     <Icon className="w-4 h-4 mx-auto mb-1" />
-                    <p className="text-sm font-bold">{stat.value}</p>
+                    <p className="text-sm font-bold">{stat.count}</p>
                     <p className="text-[9px] font-medium truncate">{stat.label}</p>
                   </div>
                 );

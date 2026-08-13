@@ -6,24 +6,22 @@ import { createServer } from 'http';
 import { setupWebSocket } from './src/websocket.js';
 import dotenv from 'dotenv';
 
-// Import models to register
+// ✅ Import all models to register them
 import './src/models/user.js';
 import './src/models/message.js';
 import './src/models/conversation.js';
-import './src/models/task.js';
+import './src/models/task.js';      // ✅ Add this
 import './src/models/project.js';
 
 dotenv.config();
 
 async function startServer() {
   try {
-    // Connect to Database
+    console.log('🚀 Starting server...');
+    
     await ConnectDB();
-
-    // Create HTTP server
     const server = createServer(app);
-
-    // Setup WebSocket
+    
     try {
       setupWebSocket(server);
       console.log("🔌 WebSocket server ready for real-time chat");
@@ -31,16 +29,17 @@ async function startServer() {
       console.log("⚠️ WebSocket setup skipped:", wsError.message);
     }
 
-    // Start server
-    server.listen(1000, () => {
-      console.log("🚀 Server is running on port 1000");
-      console.log("📡 API: http://localhost:1000/api");
-      console.log("🔌 WebSocket: ws://localhost:1000");
-      console.log("💡 WebSocket path: /socket.io");
+    const PORT = process.env.PORT || 1000;
+    server.listen(PORT, () => {
+      console.log(`🚀 Server is running on port ${PORT}`);
+      console.log(`📡 API: http://localhost:${PORT}/api`);
+      console.log(`🔌 WebSocket: ws://localhost:${PORT}`);
+      console.log(`💡 WebSocket path: /socket.io`);
     });
 
   } catch (error) {
-    console.error("❌ Database connection failed:", error);
+    console.error(" Server starting up failed:", error);
+    console.log("changes made");  
     process.exit(1);
   }
 }

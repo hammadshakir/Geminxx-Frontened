@@ -20,6 +20,7 @@ import AddPage from "./pages/AddPage";
 import ViewProject from "./pages/ViewProject";
 import EditProject from "./pages/EditProject";
 import Profile from './pages/Profile';
+import NewTask from './pages/NewTask';
 
 // Auth Pages
 import Login from "./pages/Login";
@@ -98,6 +99,10 @@ const router = createBrowserRouter([
       {
   path: "chat",
   element: <Chat/>,
+},
+{
+  path: "new-task",
+  element: <NewTask />,
 },
     ],
   },
